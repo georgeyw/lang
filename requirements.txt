@@ -1,0 +1,5 @@
+huggingface-hub>=0.20.3
+numpy>=1.22.3
+pandas>=1.4.1
+transformers>=4.17.0
+wandb>=0.16.3
