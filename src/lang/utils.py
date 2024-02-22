@@ -1,6 +1,7 @@
 import os
 import dotenv
 import wandb
+import torch.nn.functional as F
 from huggingface_hub import HfApi
 
 
@@ -25,3 +26,29 @@ HF_API = HfApi(
     endpoint="https://huggingface.co",
     token=os.environ['HF_API_KEY'] if 'HF_API_KEY' in os.environ else None,
 )
+
+
+# from transformer_lens
+def lm_cross_entropy_loss(
+    logits,
+    tokens,
+    per_token: bool = False,
+):
+    """Cross entropy loss for the language model, gives the loss for predicting the NEXT token.
+
+    Args:
+        logits (torch.Tensor): Logits. Shape [batch, pos, d_vocab]
+        tokens (torch.Tensor[int64]): Input tokens. Shape [batch, pos]
+        per_token (bool, optional): Whether to return the log probs predicted for the correct token, or the loss (ie mean of the predicted log probs). Note that the returned array has shape [batch, seq-1] as we cannot predict the first token (alternately, we ignore the final logit). Defaults to False.
+    """
+    log_probs = F.log_softmax(logits.logits, dim=-1)
+    # Use torch.gather to find the log probs of the correct tokens
+    # Offsets needed because we're predicting the NEXT token (this means the final logit is meaningless)
+    # None and [..., 0] needed because the tensor used in gather must have the same rank.
+    predicted_log_probs = log_probs[..., :-1, :].gather(
+        dim=-1, index=tokens[..., 1:, None]
+    )[..., 0]
+    if per_token:
+        return -predicted_log_probs
+    else:
+        return -predicted_log_probs.mean()
