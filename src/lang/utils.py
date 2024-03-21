@@ -2,6 +2,8 @@ import os
 import dotenv
 import wandb
 import torch.nn.functional as F
+
+import boto3
 from huggingface_hub import HfApi
 
 
@@ -15,12 +17,19 @@ def local_env_setup() -> None:
 
 def colab_env_setup() -> None:
     # mount Google Drive first
-    env_path = '/content/drive/MyDrive/induction_heads/env/.env'
+    env_path = '/content/drive/MyDrive/env/.env'
     dotenv.load_dotenv(env_path)
 
     wandb.login(key=os.environ['WANDB_API_KEY'])
-    HF_API.token = os.environ['HF_API_KEY'] 
+    HF_API.token = os.environ['HF_API_KEY']
+    S3_SESSION.aws_access_key_id = os.environ['AWS_ACCESS_KEY']
+    S3_SESSION.aws_secret_access_key = os.environ['AWS_SECRET_KEY']
 
+
+S3_SESSION = boto3.Session(
+    aws_access_key_id=os.environ['AWS_ACCESS_KEY'] if 'AWS_ACCESS_KEY' in os.environ else None,
+    aws_secret_access_key=os.environ['AWS_SECRET_KEY'] if 'AWS_SECRET_KEY' in os.environ else None,
+)
 
 HF_API = HfApi(
     endpoint="https://huggingface.co",

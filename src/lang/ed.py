@@ -1,5 +1,7 @@
 import datasets
 import torch
+import random
+from tqdm import tqdm
 
 from lang.transformer_lens import tokenize_and_concatenate
 
@@ -28,3 +30,21 @@ def ed_dataset(tokenizer=None, context_length=CONTEXT_LEN, dataset=DATASET, ds_c
                                               shuffle=False)
     print('num batches: ', len(data_loader))
     return data_loader
+
+
+def per_token_logit(model, data_loader, num_tokens=10000, seed=0, device='cuda'):
+    '''Data loader must not be shuffled'''
+    random.seed(seed)
+    per_token_logits = []
+    for batch in tqdm(data_loader):
+        if len(per_token_logits) >= num_tokens:
+            break
+        tokens = batch['tokens'].to(device)
+        batch_logits = model(tokens).detach()
+        for i, logits in enumerate(batch_logits):
+          if len(per_token_logits) >= num_tokens:
+            break
+          idx = random.randint(0, len(logits)-2)
+          true_next_token = tokens[i][idx+1].cpu().item()
+          per_token_logits.append(logits[idx][true_next_token].cpu().item())
+    return per_token_logits

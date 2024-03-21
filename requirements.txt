@@ -11,3 +11,4 @@ prettytable>=3.9.0
 python-dotenv>=1.0.0
 git-lfs>=1.6
 datasets>=2.17.0
+boto3>=1.34.64
