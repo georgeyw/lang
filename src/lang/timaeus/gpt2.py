@@ -23,6 +23,10 @@ def _download_checkpoint(step, bucket_name=S3_BUCKET, s3_folder=S3_PATH, local_d
       for obj in page.get('Contents', []):
           # Extract relative path of the object
           filename = obj['Key'].split('/')[-1]
+          # ensure checkpoint is correct
+          directory = obj['Key'].split('/')[-2]
+          if directory != f'checkpoint-{step}':
+            continue
           local_file_path = os.path.join('./', checkpoint_path, filename)
 
           # Create local directory structure if it doesn't exist
