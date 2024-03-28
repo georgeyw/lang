@@ -6,8 +6,24 @@ from lang.utils import S3_SESSION
 S3_BUCKET = 'devinterp-language'
 S3_PATH = 'checkpoints/gpt-2-small'
 
-# def _checkpoint_s3_path(step):
-#     return f's3://{S3_BUCKET}/{S3_PATH}/checkpoint-{step}'
+CONFIG = [
+    (10_000, 100),
+    (20_000, 200),
+    (50_000, 500),
+    (100_000, 1000),
+    (200_000, 2000),
+    (800_000, 5000),
+]
+
+def get_sparse_steps_gpt2(step_config=CONFIG):
+  steps = []
+  curr_left = 0
+  for config in step_config:
+    curr_right = config[0]
+    step_size = config[1]
+    steps += list(range(curr_left, curr_right, step_size))
+    curr_left = curr_right
+  return steps
 
 def _checkpoint_local_path(step, local_dir='./checkpoints'):
     return os.path.join(local_dir, f'gpt-2-small/checkpoint-{step}')
@@ -48,7 +64,9 @@ def _download_or_cache_checkpoint(step, local_dir='./checkpoints'):
         _download_checkpoint(step, local_dir=local_dir)
     return _checkpoint_local_path(step)
 
-def load_checkpoint(step, local_dir='./checkpoints'):
+def load_aws_checkpoint(step, local_dir='./checkpoints'):
+    if step == 0:
+        return _load_init_checkpoint()
     checkpoint_path = _download_or_cache_checkpoint(step, local_dir)
     model = GPTNeoXForCausalLM.from_pretrained(
             checkpoint_path, 
@@ -57,3 +75,16 @@ def load_checkpoint(step, local_dir='./checkpoints'):
             attn_implementation="flash_attention_2",
         )
     return model
+
+def _load_init_checkpoint():
+    model = GPTNeoXForCausalLM.from_pretrained(
+            'georgeyw/gpt-2-small-init-seed-5', 
+            torch_dtype=torch.bfloat16, 
+            attn_implementation="flash_attention_2",
+        )
+    return model
+
+def load_hf_checkpoint(step, local_dir='./checkpoints'):
+    if step == 0:
+        return _load_init_checkpoint()
+    pass
