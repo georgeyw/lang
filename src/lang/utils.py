@@ -61,3 +61,4 @@ def lm_cross_entropy_loss(
         return -predicted_log_probs
     else:
         return -predicted_log_probs.mean()
+    

@@ -2,6 +2,7 @@ import os
 import torch
 from transformers import GPTNeoXForCausalLM
 from lang.utils import S3_SESSION
+from lang.utils import HF_API
 
 S3_BUCKET = 'devinterp-language'
 S3_PATH = 'checkpoints/gpt-2-small'
@@ -12,7 +13,7 @@ CONFIG = [
     (50_000, 500),
     (100_000, 1000),
     (200_000, 2000),
-    (800_000, 5000),
+    (800_001, 5000),
 ]
 
 def get_sparse_steps_gpt2(step_config=CONFIG):
@@ -84,7 +85,18 @@ def _load_init_checkpoint():
         )
     return model
 
-def load_hf_checkpoint(step, local_dir='./checkpoints'):
+def load_hf_checkpoint(step):
     if step == 0:
-        return _load_init_checkpoint()
-    pass
+        return _load_init_checkpoint().to('cuda')
+    repo_id = f'georgeyw/gpt-2-small-log-spacing'
+    filepath = f'checkpoints/checkpoint-{step}'
+    model_path = HF_API.hf_hub_download(repo_id, repo_type='model', filename=f'{filepath}/model.safetensors')
+    HF_API.hf_hub_download(repo_id, repo_type='model', filename=f'{filepath}/config.json')
+    local_path = os.path.dirname(model_path)
+    model = GPTNeoXForCausalLM.from_pretrained(
+            local_path, 
+            torch_dtype=torch.bfloat16, 
+            attn_implementation="flash_attention_2",
+        )
+    model.to('cuda')
+    return model
