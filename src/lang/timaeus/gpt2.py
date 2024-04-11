@@ -100,3 +100,87 @@ def load_hf_checkpoint(step):
         )
     model.to('cuda')
     return model
+
+
+from lang.timaeus.gpt2 import load_hf_checkpoint
+import transformer_lens.loading_from_pretrained as loading
+from transformer_lens import HookedTransformer, HookedTransformerConfig
+
+
+CONFIG_DICT = {
+  'act_fn': 'gelu',
+  'attention_dir': 'causal',
+  'attn_only': False,
+  'attn_types': None,
+  'checkpoint_index': None,
+  'checkpoint_label_type': None,
+  'checkpoint_value': None,
+  'd_head': 64,
+  'd_mlp': 3072,
+  'd_model': 768,
+  'd_vocab': 50304,
+  'd_vocab_out': 50304,
+  'default_prepend_bos': True,
+  'dtype': torch.bfloat16,
+  'eps': 1e-05,
+  'final_rms': False,
+  'from_checkpoint': False,
+  'gated_mlp': False,
+  'init_mode': 'gpt2',
+  'init_weights': False,
+  'initializer_range': 0.02886751345948129,
+  'model_name': None,
+  'n_ctx': 1024,
+  'n_devices': 1,
+  'n_heads': 12,
+  'n_key_value_heads': None,
+  'n_layers': 12,
+  'n_params': 84934656,
+  'normalization_type': 'LNPre',
+  'original_architecture': 'GPTNeoXForCausalLM',
+  'parallel_attn_mlp': True,
+  'positional_embedding_type': 'rotary',
+  'post_embedding_ln': False,
+  'rotary_adjacent_pairs': False,
+  'rotary_base': 10000,
+  'rotary_dim': 16,
+  'scale_attn_by_inverse_layer_idx': False,
+  'seed': None,
+  'tokenizer_name': 'EleutherAI/pythia-160m',
+  'tokenizer_prepends_bos': False,
+  'trust_remote_code': False,
+  'use_attn_in': False,
+  'use_attn_result': False,
+  'use_attn_scale': True,
+  'use_hook_mlp_in': False,
+  'use_hook_tokens': False,
+  'use_local_attn': False,
+  'use_split_qkv_input': False,
+  'window_size': None
+}
+
+def load_hooked_transformer(step, dtype=torch.bfloat16):
+  config = HookedTransformerConfig(**CONFIG_DICT)
+  config.dtype = dtype
+  model_ht = HookedTransformer(config).to('cuda')
+
+  model = load_hf_checkpoint(step).to('cuda')
+  official_model_name = 'EleutherAI/pythia-160m'
+  state_dict = loading.get_pretrained_state_dict(
+      official_model_name, config, model, dtype=torch.bfloat16
+  )
+  # processing the state dict adds this to match the layers in HookedTransformer
+  # for some reason, this is initialized on cpu, even though the same code works 
+    # and initializes on cuda for pythia 160?
+  # anyways this fixes it
+  state_dict['unembed.b_U'] = state_dict['unembed.b_U'].to('cuda')
+
+  model_ht.load_and_process_state_dict(
+      state_dict,
+      fold_ln=True,
+      center_writing_weights=True,
+      center_unembed=True,
+      fold_value_biases=True,
+      refactor_factored_attn_matrices=False,
+  )
+  return model_ht
