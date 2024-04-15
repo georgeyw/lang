@@ -3,6 +3,8 @@ import dotenv
 import wandb
 import torch.nn.functional as F
 
+from transformer_lens.utils import get_act_name
+
 import boto3
 from huggingface_hub import HfApi
 
@@ -62,3 +64,8 @@ def lm_cross_entropy_loss(
     else:
         return -predicted_log_probs.mean()
     
+def zero_ablation_hook(layer, head):
+    def hook(value, hook):
+        value[:, :, head, :] = 0.
+        return value
+    return (get_act_name("v", layer), hook)
