@@ -1,6 +1,12 @@
 import os
 import boto3
+import pickle
 from botocore.exceptions import NoCredentialsError
+
+
+BUCKET = 'devinterp-language'
+TEMP_FILE = '/content/temp_file.pkl'
+
 
 def upload_file_to_s3(file_name, bucket, object_name=None):
     """
@@ -70,3 +76,11 @@ def download_file_from_s3(object_name, bucket, file_name=None):
         print(f"Failed to upload file: {e}")
         return False
     return True
+
+
+def push_pickle_to_s3(data, object_name, model='gpt2', bucket=BUCKET, temp_file=TEMP_FILE):
+  with open(temp_file, 'wb') as file:
+    pickle.dump(data, file)
+  object_prefix = f'data/{model}/'
+  upload_file_to_s3(temp_file, bucket,
+                    object_name=f'{object_prefix}{object_name}')
