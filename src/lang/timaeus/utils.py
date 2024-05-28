@@ -4,10 +4,10 @@ CONFIG = [
     (50_000, 500),
     (100_000, 1000),
     (200_000, 2000),
-    (800_000, 5000),
+    (800_001, 5000),
 ]
 
-def get_sparse_steps_gpt2(step_config=CONFIG):
+def log_steps(max_step = None, step_config=CONFIG):
   steps = []
   curr_left = 0
   for config in step_config:
@@ -15,4 +15,8 @@ def get_sparse_steps_gpt2(step_config=CONFIG):
     step_size = config[1]
     steps += list(range(curr_left, curr_right, step_size))
     curr_left = curr_right
+
+  if max_step is not None:
+    steps = [step for step in steps if step <= max_step]
+    
   return steps

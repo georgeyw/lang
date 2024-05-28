@@ -84,3 +84,12 @@ def push_pickle_to_s3(data, object_name, model='gpt2', bucket=BUCKET, temp_file=
   object_prefix = f'data/{model}/'
   upload_file_to_s3(temp_file, bucket,
                     object_name=f'{object_prefix}{object_name}')
+  
+
+def pull_pickle_from_s3(object_name, model='gpt2', bucket=BUCKET, temp_file=TEMP_FILE):
+  object_prefix = f'data/{model}/'
+  download_file_from_s3(object_name=f'{object_prefix}{object_name}', bucket=bucket,
+                        file_name=temp_file)
+  with open(temp_file, 'rb') as file:
+    data = pickle.load(file)
+  return data
